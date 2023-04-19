@@ -31,7 +31,8 @@ let api = {
         update: (data) => axios.patch(`web/blog/${data._id}`, data),
         comment: (data) => axios.post('web/blog/addcomment', data),
         search: (data) => axios.post('web/blog/search', data),
-        upload: (data) => axios.post('web/blog/upload', data,config)
+        upload: (data) => axios.post('web/blog/upload', data,config),
+        removeImage:(data) => axios.put('web/blog/removeImage',data)
     }
 
 

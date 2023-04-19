@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useState } from 'react';
-import { Table, Container, Row, Form, Button } from 'react-bootstrap';
+import { Table, Container, Row, Form, Button, Modal } from 'react-bootstrap';
 import api from '../api'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -9,13 +9,16 @@ const Blog = (props) => {
     const [blog, setBlog] = useState({
         title: '',
         content: '',
-        images: ''
+        images: '',
+        comment: ''
     })
 
     const [blogList, setBlogList] = useState([])
     const [errors, setError] = useState({})
     const [img, setImg] = useState(false)
     const [search, setSearch] = useState('')
+    const [show, setShow] = useState(false)
+    const [cId, setId] = useState('')
 
     useEffect(() => {
         getList()
@@ -69,46 +72,9 @@ const Blog = (props) => {
 
     }
 
-    const addAddress = () => {
-        // let newUser = { ...user }
-        // var obj = {
-        //     city: '',
-        //     state: '',
-        //     house_no: '',
-        //     country: '',
-        //     active: false
-        // }
-        // newUser['address'].push(obj)
-        // setUser(newUser)
-    }
 
-    const deleteAddress = (i) => {
-        // let newUser = { ...user }
-        // newUser['address'].splice(i, 1)
-        // setUser(newUser)
-    }
-
-    const handleAddress = (e, i) => {
-        // let newUser = { ...user }
-        // if (e.target.name == 'active') {
-        //     newUser['address'][i][e.target.name] = e.target.checked
-        // } else
-        //     newUser['address'][i][e.target.name] = e.target.value
-        // setUser(newUser)
-    }
-
-    const deleteUser = (u) => {
-        console.log(u)
-        api.user.remove(u)
-            .then((res) => {
-                if (res.status == 200) {
-                    getList()
-                }
-            })
-    }
 
     const editBlogs = (u) => {
-        console.log(u)
         var i = u.images.includes(".");
         if (i) setImg(true)
         else setImg(false)
@@ -133,7 +99,6 @@ const Blog = (props) => {
     }
 
     const deleteBlog = (d) => {
-
         api.blog.delete(d._id)
             .then((res) => { if (res.status == 200) getList() })
     }
@@ -148,6 +113,36 @@ const Blog = (props) => {
         } else getList()
     }
 
+    const deleteImg = () => {
+        api.blog.removeImage({ path: 'public/' + blog.images })
+            .then((res) => {
+                if (res.status == 200) {
+                    let newBlog = { ...blog }
+                    newBlog['images'] = ''
+                    setBlog(newBlog)
+                    setImg(false)
+                }
+            })
+            .catch((err) => { console.log(err) })
+    }
+
+    const addComment = (e) => {
+        let newBlog = { ...blog }
+        newBlog['comment'] = e.target.value;
+        setBlog(newBlog)
+    }
+
+    const comment = (d) => {
+        setShow(true)
+        setId(d._id)
+    }
+
+    const saveComment = () => {
+        api.blog.comment({ id:cId , comment: blog.comment })
+            .then((res) => { if(res.status == 201){setShow(false);getList() } })
+            .catch((err) => { console.log(err) })
+    }
+
     return (
         <>
 
@@ -159,26 +154,37 @@ const Blog = (props) => {
                     <div className="mb-3 row">
                         <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Title</label>
                         <div className="col-sm-5">
-                            <input type="text" name='title' value={blog.title || ''} className="form-control" id="staticName" placeholder='Enter Name' onChange={handleName} />
+                            <input type="text" name='title' value={blog.title || ''} className="form-control" id="staticName" placeholder='Enter Title' onChange={handleName} />
                             <div className='form-control-feedback text-danger' type='invalid'>{errors.name}</div>
                         </div>
                     </div>
                     <div className="mb-3 row">
                         <label htmlFor="inputPassword" className="col-sm-2 col-form-label">Content</label>
                         <div className="col-sm-5">
-                            <input type="text" name='content' value={blog?.content || ''} className="form-control" id="inpuAge" placeholder='Enter Age' onChange={handleName} />
+                            <input type="text" name='content' value={blog?.content || ''} className="form-control" id="inpuAge" placeholder='Enter Content' onChange={handleName} />
                             <div className='form-control-feedback text-danger' type='invalid'>{errors.age}</div>
                         </div>
                     </div>
 
                     <div className="mb-3 row">
                         <label htmlFor="inputPassword" className="col-sm-2 col-form-label">Image</label>
-                        <div className="col-sm-5">
+                        <div className="col-sm-3">
                             {!img ?
                                 <input type="file" className="form-control" onChange={uploadImage} />
                                 :
-                                <img src={'http://localhost:3500/' + blog.images} className='h-50 w-50' />
+                                (<>
+                                    <div className='position-relative'>
+                                        <button type="submit" class="close position-absolute" style={{
+                                            right: '0px'
+                                        }} onClick={deleteImg}>
+                                            <span>&times;</span>
+                                        </button>
+                                        <img src={'http://localhost:3500/' + blog.images} style={{ width: '100%' }} />
+                                    </div>
+                                </>
+                                )
                             }
+
                         </div>
                     </div>
 
@@ -216,12 +222,12 @@ const Blog = (props) => {
                                     <td>{u?.content}</td>
                                     <td><img src={'http://localhost:3500/' + u?.images} className='w-25 h-25' /></td>
                                     <td>
-                                        {u.comment?.map((c) => {
-                                            <span>{c}</span>
-                                        })}
+                                        {u.comment?.map((c,i) => (
+                                            <><span>{c}</span><br/></>
+                                        ))}
                                     </td>
                                     <td className='d-flex'>
-                                        <button type="button" class="btn btn-primary w-25" style={{ fontSize: '10px' }}>Add Comment</button>
+                                        <button type="button" class="btn btn-primary w-25" style={{ fontSize: '10px' }} onClick={() => { comment(u) }}>Add Comment</button>
                                         <i className="material-icons" style={{ cursor: 'pointer' }} onClick={() => deleteBlog(u)}>delete</i>
                                         <i className='material-icons' style={{ cursor: 'pointer' }} onClick={() => editBlogs(u)}>fas fa-edit</i>
                                     </td>
@@ -231,7 +237,36 @@ const Blog = (props) => {
                         </tbody>
                     </Table>
                 </Row>
-            </Container>
+
+
+                <Modal
+                    show={show}
+                    animation={true}
+                    size="md" className="shadow-lg border">
+                    <Modal.Header className="bg-danger text-white text-center py-1">
+                        <Modal.Title className="text-center">
+                            <h5>Add Comment</h5>
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body className="py-0 border">
+                        <div class="form-group">
+                            <label for="exampleInputEmail1">Comment</label>
+                            <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter comment" onChange={addComment} />
+
+                        </div>
+                    </Modal.Body>
+                    <Modal.Footer className="py-1 d-flex justify-content-center">
+                        <div>
+                            <Button
+                                variant="outline-dark" onClick={() => setShow(false)}>Cancel</Button>
+                        </div>
+                        <div>
+                            <Button variant="outline-danger" className="mx-2 px-3" onClick={() => saveComment()}>Save</Button>
+                        </div>
+                    </Modal.Footer>
+                </Modal>
+
+            </Container >
 
         </>
     );
